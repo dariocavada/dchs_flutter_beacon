@@ -5,7 +5,7 @@
 Pod::Spec.new do |s|
   s.name             = 'dchs_flutter_beacon'
   s.license = { :type => 'Apache', :file => '../LICENSE' }
-  s.version          = '0.6.1'
+  s.version          = '0.6.5'
   s.summary          = 'Flutter plugin for scanning beacon (iBeacon platform) devices on Android and iOS.'
   s.description      = <<-DESC
 A comprehensive Flutter plugin that enables beacon ranging, monitoring, and broadcasting functionalities using CoreLocation and CoreBluetooth frameworks.
