@@ -1,3 +1,23 @@
+## [0.6.5]
+* Updated
+    * Android Dependencies:
+        * Update Android-Beacon-Library to version [2.21.1](https://github.com/AltBeacon/android-beacon-library/tree/2.21.1)
+        * Update androidx.core:core-ktx from 1.9.0 to 1.13.1 for Android 15 support
+        * Update androidx.appcompat:appcompat from 1.5.1 to 1.7.0 for enhanced Material Design 3 support
+        * Update androidx.annotation:annotation from 1.2.0 to 1.8.2 for improved null safety
+        * Update org.mockito:mockito-core from 5.0.0 to 5.12.0 for better testing compatibility
+    * Build Tools:
+        * Update Kotlin version from 1.8.22 to 2.1.0 for latest language features and performance improvements
+        * Update Android Gradle Plugin from 8.1.0 to 8.6.0 for better Android 15 compatibility
+        * Update Gradle wrapper from 8.3 to 8.10.2 for improved build performance
+        * Update compileSdk to 35 (Android 15) for latest API support
+        * Update Java compatibility from VERSION_1_8 to VERSION_1_11 for modern development standards
+    * Compatibility:
+        * Full Android 15 (API 35) support
+        * Enhanced compatibility with latest AndroidX libraries
+        * Improved build performance and compilation times
+        * Future-proof setup with latest toolchain
+
 ## [0.6.4]
 * Added
     * New Methods:
