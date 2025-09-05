@@ -11,7 +11,7 @@
         * Update Android Gradle Plugin from 8.1.0 to 8.6.0 for better Android 15 compatibility
         * Update Gradle wrapper from 8.3 to 8.10.2 for improved build performance
         * Update compileSdk to 35 (Android 15) for latest API support
-        * Update Java compatibility from VERSION_1_8 to VERSION_11 for modern development standards
+        * Update Java compatibility from VERSION_1_8 to VERSION_17 for modern development standards
     * Compatibility:
         * Full Android 15 (API 35) support
         * Enhanced compatibility with latest AndroidX libraries
