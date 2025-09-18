@@ -32,6 +32,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
     private var activityPluginBinding: ActivityPluginBinding? = null
 
     private var activity: Activity? = null
+    private var applicationContext: Context? = null
     private lateinit var channel: MethodChannel
     private lateinit var eventChannel: EventChannel
     private lateinit var eventChannelMonitoring: EventChannel
@@ -49,6 +50,8 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
 
     override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         this.flutterPluginBinding = binding
+        this.applicationContext = binding.applicationContext
+        setupChannels(binding.binaryMessenger, null)
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
@@ -59,8 +62,8 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         this.activityPluginBinding = binding
         this.activity = binding.activity
-
-        setupChannels(flutterPluginBinding!!.binaryMessenger, activity!!)
+        // Re-setup channels with activity context
+        setupChannels(flutterPluginBinding!!.binaryMessenger, activity)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -74,65 +77,28 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
     override fun onDetachedFromActivity() {
         teardownChannels()
         this.activity = null
+        // Re-setup channels with only application context for background
+        setupChannels(flutterPluginBinding!!.binaryMessenger, null)
     }
 
-    private fun setupChannels(messenger: BinaryMessenger, activity: Activity) {
+    private fun setupChannels(messenger: BinaryMessenger, activity: Activity?) {
         activityPluginBinding?.addActivityResultListener(this)
         activityPluginBinding?.addRequestPermissionsResultListener(this)
 
+        val ctx = activity ?: applicationContext
+        if (ctx == null) return
 
-        //BeaconManager.setUseTrackingCache(true)
-
-        beaconManager = BeaconManager.getInstanceForApplication(activity.applicationContext)
-        //beaconManager!!.setMaxTrackingAge(10000)
-        //beaconManager!!.useTrackingCache(true) 
-        //beaconManager!!.maxTrackingAgeMillis(10000)
-        //beaconManager!!.setLongScanForcingEnabled(true)
-
-    /*
-        // Defaults
-         const val regionExitPeriodMillis = 30000
-        const val useTrackingCache = true
-        const val maxTrackingAgeMillis = 10000
-
-        const val longScanForcingEnabled = false
-        
-         */
-
-        /* Add parameters pass from flutter */
-        //BeaconManager.setDebug(true)
-
-        /* Add parameters pass from flutter */
-        
-        /*beaconManager!!.foregroundScanPeriod = 1100L
-        beaconManager!!.foregroundBetweenScanPeriod = 500L
-        beaconManager!!.backgroundScanPeriod = 1100L
-        beaconManager!!.backgroundBetweenScanPeriod = 500L
-
-        beaconManager!!.setEnableScheduledScanJobs(true)*/
-
-        /*beaconManager!!.enableForegroundServiceScanning(null, 456)
-        beaconManager!!.setEnableScheduledScanJobs(true)
-        beaconManager!!.isRegionStatePersistenceEnabled = true
-        beaconManager!!.isBleEnable = true
-        
-        beaconManager!!.isBackgroundModeUnrestrictedByLocation = true
-        beaconManager!!.isAnyConsumerBound = true
-        beaconManager!!.isScannerInScanMode = true*/
-        
-        /* Add parameters pass from flutter */
-        //setupForegroundService(activity.applicationContext)
-
+        beaconManager = BeaconManager.getInstanceForApplication(ctx)
         val iBeaconLayout = BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24")
-
         if (!beaconManager!!.beaconParsers.contains(iBeaconLayout)) {
             beaconManager!!.beaconParsers.clear()
             beaconManager!!.beaconParsers.add(iBeaconLayout)
         }
 
-        platform = FlutterPlatform(activity)
-        beaconScanner = FlutterBeaconScanner(this, activity)
-        beaconBroadcast = FlutterBeaconBroadcast(activity, iBeaconLayout)
+        // Use activity if available, otherwise use application context for background
+        platform = if (activity != null) FlutterPlatform(activity) else FlutterPlatform(ctx)
+        beaconScanner = FlutterBeaconScanner(this, ctx)
+        beaconBroadcast = FlutterBeaconBroadcast(ctx, iBeaconLayout)
 
         channel = MethodChannel(messenger, "flutter_beacon")
         channel.setMethodCallHandler(this)
@@ -144,7 +110,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         eventChannelMonitoring.setStreamHandler(beaconScanner!!.monitoringStreamHandler)
 
         eventChannelBluetoothState = EventChannel(messenger, "flutter_bluetooth_state_changed")
-        eventChannelBluetoothState.setStreamHandler(FlutterBluetoothStateReceiver(activity))
+        eventChannelBluetoothState.setStreamHandler(FlutterBluetoothStateReceiver(ctx))
 
         eventChannelAuthorizationStatus = EventChannel(messenger, "flutter_authorization_status_changed")
         eventChannelAuthorizationStatus.setStreamHandler(locationAuthorizationStatusStreamHandler)
@@ -162,7 +128,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         builder.setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Beacon services")
 
-        val intent = Intent(context, activity!!.javaClass)
+        val intent = Intent(context, activity?.javaClass ?: return)
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -186,8 +152,6 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         BeaconManager.getInstanceForApplication(context).enableForegroundServiceScanning(notification, 456)
         Log.d("DchsFlutterBeaconPlugin", "Foreground service scanning abilitato")
     }
-
-
 
     private fun teardownChannels() {
         activityPluginBinding?.removeActivityResultListener(this)

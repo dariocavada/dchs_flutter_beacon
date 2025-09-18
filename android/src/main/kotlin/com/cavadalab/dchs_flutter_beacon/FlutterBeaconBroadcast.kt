@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseSettings
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
@@ -14,13 +15,13 @@ import org.altbeacon.beacon.BeaconParser
 import org.altbeacon.beacon.BeaconTransmitter
 import io.flutter.plugin.common.MethodChannel
 
-class FlutterBeaconBroadcast(private val activity: Activity, iBeaconLayout: BeaconParser) {
+class FlutterBeaconBroadcast(private val context: Context, iBeaconLayout: BeaconParser) {
     companion object {
         private val TAG = FlutterBeaconBroadcast::class.java.simpleName
         const val REQUEST_CODE_BLUETOOTH_ADVERTISE = 1236
     }
 
-    private val beaconTransmitter: BeaconTransmitter = BeaconTransmitter(activity.applicationContext, iBeaconLayout)
+    private val beaconTransmitter: BeaconTransmitter = BeaconTransmitter(context.applicationContext, iBeaconLayout)
     private var pendingResult: MethodChannel.Result? = null
     private var beacon: Beacon? = null
     private var beaconMap: Map<String, Any?>? = null
@@ -62,15 +63,17 @@ class FlutterBeaconBroadcast(private val activity: Activity, iBeaconLayout: Beac
     }
 
     private fun hasBluetoothAdvertisePermission(): Boolean {
-        return ContextCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun requestBluetoothAdvertisePermission() {
-        ActivityCompat.requestPermissions(
-            activity,
-            arrayOf(Manifest.permission.BLUETOOTH_ADVERTISE),
-            REQUEST_CODE_BLUETOOTH_ADVERTISE
-        )
+        if (context is Activity) {
+            ActivityCompat.requestPermissions(
+                context,
+                arrayOf(Manifest.permission.BLUETOOTH_ADVERTISE),
+                REQUEST_CODE_BLUETOOTH_ADVERTISE
+            )
+        }
     }
 
     private fun startAdvertising(beacon: Beacon?, map: Map<String, Any?>?) {
