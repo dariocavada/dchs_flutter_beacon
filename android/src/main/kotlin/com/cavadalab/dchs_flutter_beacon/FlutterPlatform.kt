@@ -16,27 +16,36 @@ import androidx.core.content.ContextCompat
 import org.altbeacon.beacon.BeaconTransmitter
 import java.lang.ref.WeakReference
 
-class FlutterPlatform(activity: Activity) {
-    private val activityWeakReference = WeakReference(activity)
+
+class FlutterPlatform(context: Context) {
+    private val contextWeakReference = WeakReference(context)
+
+    private val context: Context?
+        get() = contextWeakReference.get()
 
     private val activity: Activity?
-        get() = activityWeakReference.get()
+        get() = context as? Activity
 
     fun openLocationSettings() {
+        val ctx = context ?: return
         val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        activity?.startActivity(intent)
+        if (ctx is Activity) ctx.startActivity(intent) else ctx.startActivity(intent)
     }
 
     fun openBluetoothSettings() {
-        val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-        activity?.startActivityForResult(intent, DchsFlutterBeaconPlugin.REQUEST_CODE_BLUETOOTH)
+        val ctx = context ?: return
+        if (ctx is Activity) {
+            val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            ctx.startActivityForResult(intent, DchsFlutterBeaconPlugin.REQUEST_CODE_BLUETOOTH)
+        }
     }
 
     fun requestAuthorization() {
-        activity?.let {
+        val ctx = context
+        if (ctx is Activity) {
             ActivityCompat.requestPermissions(
-                it,
+                ctx,
                 arrayOf(
                     Manifest.permission.ACCESS_COARSE_LOCATION,
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -48,10 +57,10 @@ class FlutterPlatform(activity: Activity) {
     }
 
     fun checkLocationServicesPermission(): Boolean {
-        val act = activity ?: return false
+        val ctx = context ?: return false
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             ContextCompat.checkSelfPermission(
-                act,
+                ctx,
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         } else {
@@ -60,15 +69,15 @@ class FlutterPlatform(activity: Activity) {
     }
 
     fun checkLocationServicesIfEnabled(): Boolean {
-        val act = activity ?: return false
+        val ctx = context ?: return false
         return when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> {
-                val locationManager = act.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+                val locationManager = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
                 locationManager?.isLocationEnabled ?: false
             }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
                 val mode = Settings.Secure.getInt(
-                    act.contentResolver,
+                    ctx.contentResolver,
                     Settings.Secure.LOCATION_MODE,
                     Settings.Secure.LOCATION_MODE_OFF
                 )
@@ -80,20 +89,20 @@ class FlutterPlatform(activity: Activity) {
 
     @SuppressLint("MissingPermission")
     fun checkBluetoothIfEnabled(): Boolean {
-        val act = activity ?: throw RuntimeException("Activity is null")
-        val bluetoothManager = act.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val ctx = context ?: throw RuntimeException("Context is null")
+        val bluetoothManager = ctx.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
             ?: throw RuntimeException("No Bluetooth service")
         val adapter = bluetoothManager.adapter
         return adapter?.isEnabled ?: false
     }
 
     fun isBroadcastSupported(): Boolean {
-        val act = activity ?: return false
-        return BeaconTransmitter.checkTransmissionSupported(act) == BeaconTransmitter.SUPPORTED
+        val ctx = context ?: return false
+        return BeaconTransmitter.checkTransmissionSupported(ctx) == BeaconTransmitter.SUPPORTED
     }
 
     fun shouldShowRequestPermissionRationale(permission: String): Boolean {
-        val act = activity ?: return false
-        return ActivityCompat.shouldShowRequestPermissionRationale(act, permission)
+        val ctx = context
+        return if (ctx is Activity) ActivityCompat.shouldShowRequestPermissionRationale(ctx, permission) else false
     }
 }
