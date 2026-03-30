@@ -49,13 +49,27 @@ class FlutterPlatform(activity: Activity) {
 
     fun checkLocationServicesPermission(): Boolean {
         val act = activity ?: return false
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            ContextCompat.checkSelfPermission(
-                act,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                // Android 12+: BLUETOOTH_SCAN is required for BLE scanning;
+                // ACCESS_FINE_LOCATION is also needed unless neverForLocation is set.
+                ContextCompat.checkSelfPermission(
+                    act,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(
+                    act,
+                    Manifest.permission.BLUETOOTH_SCAN
+                ) == PackageManager.PERMISSION_GRANTED
+            }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                // Android 6–11: ACCESS_FINE_LOCATION is required for BLE scanning on Android 10+.
+                ContextCompat.checkSelfPermission(
+                    act,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+            }
+            else -> true
         }
     }
 
