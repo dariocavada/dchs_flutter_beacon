@@ -8,10 +8,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.RemoteException
 import android.util.Log
-import androidx.annotation.NonNull
 import io.flutter.plugin.common.EventChannel
 import org.altbeacon.beacon.*
-import java.lang.ref.WeakReference
 
 class FlutterBeaconScanner(private val plugin: DchsFlutterBeaconPlugin,  private val activity: Activity) {
 
@@ -19,7 +17,6 @@ class FlutterBeaconScanner(private val plugin: DchsFlutterBeaconPlugin,  private
         private val TAG = FlutterBeaconScanner::class.java.simpleName
     }
 
-    private val activityRef = WeakReference(activity)
     private val handler = Handler(Looper.getMainLooper())
 
     private var eventSinkRanging: EventChannel.EventSink? = null
@@ -239,7 +236,7 @@ class FlutterBeaconScanner(private val plugin: DchsFlutterBeaconPlugin,  private
         }
 
         override fun bindService(intent: Intent, connection: ServiceConnection, mode: Int): Boolean {
-            return activity.bindService(intent, connection, mode) ?: false
+            return activity.bindService(intent, connection, mode)
         }
     }
 }

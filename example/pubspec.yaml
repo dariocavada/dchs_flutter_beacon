@@ -3,7 +3,7 @@ description: "Demonstrates how to use the dchs_flutter_beacon plugin."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 environment:
-  sdk: ^3.7.0
+  sdk: ^3.9.0
 
 dependencies:
   flutter:

@@ -1,6 +1,5 @@
 package com.cavadalab.dchs_flutter_beacon
 
-import android.util.Log
 import org.altbeacon.beacon.Beacon
 import org.altbeacon.beacon.BeaconParser
 import org.altbeacon.beacon.Identifier
@@ -80,8 +79,7 @@ object FlutterBeaconUtils {
             }
 
             Region(identifier, identifiers)
-        } catch (e: IllegalArgumentException) {
-            Log.e("REGION", "Error: $e")
+        } catch (e: RuntimeException) {
             null
         }
     }

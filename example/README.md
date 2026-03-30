@@ -1,16 +1,22 @@
 # dchs_flutter_beacon_example
 
-Demonstrates how to use the dchs_flutter_beacon plugin.
+Example application for `dchs_flutter_beacon`.
 
-## Getting Started
+It demonstrates:
 
-This project is a starting point for a Flutter application.
+* permission and settings checks
+* beacon ranging
+* beacon monitoring
+* iBeacon broadcasting
 
-A few resources to get you started if this is your first Flutter project:
+## Run the example
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+For Android, review the manifest in `example/android/app/src/main/AndroidManifest.xml`
+and make sure the test device has Bluetooth and Location Services enabled.
+
+For the full package documentation, see the root [README](../README.md).

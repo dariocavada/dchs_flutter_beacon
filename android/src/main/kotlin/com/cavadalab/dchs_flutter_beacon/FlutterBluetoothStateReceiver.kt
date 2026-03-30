@@ -12,6 +12,7 @@ import io.flutter.plugin.common.EventChannel
 class FlutterBluetoothStateReceiver(private val context: Context) : BroadcastReceiver(), EventChannel.StreamHandler {
 
     private var eventSink: EventChannel.EventSink? = null
+    private var isRegistered = false
 
     override fun onReceive(context: Context, intent: Intent) {
         if (eventSink == null) return
@@ -46,11 +47,18 @@ class FlutterBluetoothStateReceiver(private val context: Context) : BroadcastRec
         eventSink = events
         sendState(state)
 
-        val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
-        context.registerReceiver(this, filter)
+        if (!isRegistered) {
+            val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+            context.registerReceiver(this, filter)
+            isRegistered = true
+        }
     }
 
     override fun onCancel(arguments: Any?) {
-        context.unregisterReceiver(this)
+        eventSink = null
+        if (isRegistered) {
+            runCatching { context.unregisterReceiver(this) }
+            isRegistered = false
+        }
     }
 }

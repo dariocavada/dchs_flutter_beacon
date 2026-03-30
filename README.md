@@ -1,12 +1,12 @@
 # Dchs Flutter Beacon
 
 
-[![Pub](https://img.shields.io/pub/v/dchs_flutter_beacon.svg)](https://pub.dartlang.org/packages/dchs_flutter_beacon) 
+[![Pub](https://img.shields.io/pub/v/dchs_flutter_beacon.svg)](https://pub.dev/packages/dchs_flutter_beacon) 
 [![GitHub](https://img.shields.io/github/license/dariocavada/dchs_flutter_beacon.svg?color=2196F3)](https://github.com/dariocavada/dchs_flutter_beacon/blob/master/LICENSE) 
 
-[Flutter plugin](https://pub.dartlang.org/packages/dchs_flutter_beacon/) to work with iBeacons.  
+[Flutter plugin](https://pub.dev/packages/dchs_flutter_beacon/) to work with iBeacons.  
 
-An hybrid iBeacon scanner and transmitter SDK for Flutter plugin. Supports Android API 21+ and iOS 13+.
+Hybrid iBeacon scanner and transmitter plugin for Flutter. Supports Android API 21+ and iOS 13+.
 
 Features:
 
@@ -21,7 +21,7 @@ Add to pubspec.yaml:
 
 ```yaml
 dependencies:
-  dchs_flutter_beacon: latest
+  dchs_flutter_beacon: ^0.6.7
 ```
 
 ### Setup specific for Android
@@ -29,12 +29,13 @@ dependencies:
 Add the following permissions to your `AndroidManifest.xml`:
 
 ```xml
-<!-- Required for BLE scanning on all supported Android versions -->
+<!-- Required for BLE scanning on Android 6+ -->
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
 <!-- Required for BLE scanning on Android 12+ (API 31+) -->
 <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+
+<!-- Recommended when checking Bluetooth state or prompting the user to enable Bluetooth -->
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
 <!-- Optional: background scanning -->
@@ -44,11 +45,11 @@ Add the following permissions to your `AndroidManifest.xml`:
 <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 ```
 
-> **Important:** `ACCESS_FINE_LOCATION` is **required** for BLE/iBeacon scanning on Android 10+
-> (API 29+). Without it, scanning will silently fail even if `ACCESS_COARSE_LOCATION` is granted.
+> **Important:** on Android 12+ the plugin currently expects both `ACCESS_FINE_LOCATION`
+> and `BLUETOOTH_SCAN` for scanning. On Android 6 to 11 it expects `ACCESS_FINE_LOCATION`.
 
 In addition to declaring permissions in the manifest you must also request them at runtime.
-The plugin's `initializeAndCheckScanning` handles this automatically, but you can also call
+The plugin can handle this automatically with `initializeAndCheckScanning`, or you can call
 `flutterBeacon.requestAuthorization` explicitly before starting a scan.
 
 #### Location services must be enabled
@@ -162,13 +163,28 @@ Ranging APIs are designed as reactive streams.
 
 ```dart
 try {
-  // if you want to manage manual checking about the required permissions
+  // Manual initialization only
   await flutterBeacon.initializeScanning;
   
-  // or if you want to include automatic checking permission
+  // Initialization with permission and settings checks
   await flutterBeacon.initializeAndCheckScanning;
 } on PlatformException catch(e) {
   // library failed to initialize, check code and message
+}
+```
+
+### Recommended Android startup flow
+
+```dart
+final initialized = await flutterBeacon.initializeAndCheckScanning;
+if (!initialized) {
+  return;
+}
+
+final locationEnabled = await flutterBeacon.checkLocationServicesIfEnabled;
+if (!locationEnabled) {
+  await flutterBeacon.openLocationSettings;
+  return;
 }
 ```
 
@@ -221,10 +237,44 @@ _streamMonitoring = flutterBeacon.monitoring(regions).listen((MonitoringResult r
 _streamMonitoring.cancel();
 ```
 
+### Broadcasting as iBeacon
+
+```dart
+if (await flutterBeacon.isBroadcastSupported()) {
+  await flutterBeacon.startBroadcast(
+    BeaconBroadcast(
+      proximityUUID: 'E2C56DB5-DFFB-48D2-B060-D0F5A71096E0',
+      major: 1,
+      minor: 1,
+      txPower: -59,
+      identifier: 'com.example.myBeacon',
+    ),
+  );
+}
+
+await flutterBeacon.stopBroadcast();
+```
+
 ## Under the hood
 
 * iOS uses native Framework [CoreLocation](https://developer.apple.com/documentation/corelocation/)
 * Android uses the [Android-Beacon-Library](https://github.com/AltBeacon/android-beacon-library) ([Apache License 2.0](https://github.com/AltBeacon/android-beacon-library/blob/master/LICENSE))  
+
+## Example app
+
+The example app in [example](example) demonstrates:
+
+* permission and settings checks
+* ranging and monitoring
+* beacon broadcasting
+
+Run it with:
+
+```bash
+cd example
+flutter pub get
+flutter run
+```
 
 # Author
 
@@ -232,5 +282,3 @@ Flutter Beacon plugin originally was developed by Eyro Labs.
 
 DCHS Flutter Beacon is an updated version of the original plugin, now ported to Kotlin by Dario Cavada. 
 For inquiries or support, feel free to reach out at dario.cavada.lab@gmail.com (https://www.suggesto.eu)
-
-

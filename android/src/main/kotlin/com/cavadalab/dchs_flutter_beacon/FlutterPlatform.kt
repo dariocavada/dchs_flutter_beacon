@@ -33,15 +33,29 @@ class FlutterPlatform(activity: Activity) {
         activity?.startActivityForResult(intent, DchsFlutterBeaconPlugin.REQUEST_CODE_BLUETOOTH)
     }
 
+    fun requiredAuthorizationPermissions(): Array<String> {
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.BLUETOOTH_SCAN
+            )
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+            else -> emptyArray()
+        }
+    }
+
     fun requestAuthorization() {
+        val permissions = requiredAuthorizationPermissions()
+        if (permissions.isEmpty()) {
+            return
+        }
+
         activity?.let {
             ActivityCompat.requestPermissions(
                 it,
-                arrayOf(
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.BLUETOOTH_SCAN
-                ),
+                permissions,
                 DchsFlutterBeaconPlugin.REQUEST_CODE_LOCATION
             )
         }

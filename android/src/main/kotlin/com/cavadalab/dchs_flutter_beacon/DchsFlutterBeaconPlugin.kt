@@ -1,10 +1,5 @@
 package com.cavadalab.dchs_flutter_beacon
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.Context
 import android.os.Build
 import android.util.Log
 
@@ -73,7 +68,9 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
     }
 
     override fun onDetachedFromActivity() {
+        stopBeaconSession()
         teardownChannels()
+        clearActivityScopedReferences()
         this.activity = null
     }
 
@@ -81,48 +78,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         activityPluginBinding?.addActivityResultListener(this)
         activityPluginBinding?.addRequestPermissionsResultListener(this)
 
-
-        //BeaconManager.setUseTrackingCache(true)
-
         beaconManager = BeaconManager.getInstanceForApplication(activity.applicationContext)
-        //beaconManager!!.setMaxTrackingAge(10000)
-        //beaconManager!!.useTrackingCache(true) 
-        //beaconManager!!.maxTrackingAgeMillis(10000)
-        //beaconManager!!.setLongScanForcingEnabled(true)
-
-    /*
-        // Defaults
-         const val regionExitPeriodMillis = 30000
-        const val useTrackingCache = true
-        const val maxTrackingAgeMillis = 10000
-
-        const val longScanForcingEnabled = false
-        
-         */
-
-        /* Add parameters pass from flutter */
-        //BeaconManager.setDebug(true)
-
-        /* Add parameters pass from flutter */
-        
-        /*beaconManager!!.foregroundScanPeriod = 1100L
-        beaconManager!!.foregroundBetweenScanPeriod = 500L
-        beaconManager!!.backgroundScanPeriod = 1100L
-        beaconManager!!.backgroundBetweenScanPeriod = 500L
-
-        beaconManager!!.setEnableScheduledScanJobs(true)*/
-
-        /*beaconManager!!.enableForegroundServiceScanning(null, 456)
-        beaconManager!!.setEnableScheduledScanJobs(true)
-        beaconManager!!.isRegionStatePersistenceEnabled = true
-        beaconManager!!.isBleEnable = true
-        
-        beaconManager!!.isBackgroundModeUnrestrictedByLocation = true
-        beaconManager!!.isAnyConsumerBound = true
-        beaconManager!!.isScannerInScanMode = true*/
-        
-        /* Add parameters pass from flutter */
-        //setupForegroundService(activity.applicationContext)
 
         val iBeaconLayout = BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24")
 
@@ -151,51 +107,9 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         eventChannelAuthorizationStatus.setStreamHandler(locationAuthorizationStatusStreamHandler)
     }
 
-    private fun setupForegroundService(context: Context) {
-        Log.d("DchsFlutterBeaconPlugin", "setupForegroundService iniziato")
-        
-        val builder: Notification.Builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Log.d("DchsFlutterBeaconPlugin", "setupForegroundService iniziato beacon-ref-notification-id")
-            Notification.Builder(context, "beacon-ref-notification-id")
-        } else {
-            Notification.Builder(context)
-        }
-        builder.setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Beacon services")
-
-        val intent = Intent(context, activity!!.javaClass)
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        builder.setContentIntent(pendingIntent)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "beacon-ref-notification-id",
-                "My Notification Name",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "My Notification Channel Description"
-            }
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-            builder.setChannelId(channel.id)
-            Log.d("DchsFlutterBeaconPlugin", "NotificationChannel creato")
-        }
-
-        val notification = builder.build()
-        BeaconManager.getInstanceForApplication(context).enableForegroundServiceScanning(notification, 456)
-        Log.d("DchsFlutterBeaconPlugin", "Foreground service scanning abilitato")
-    }
-
-
-
     private fun teardownChannels() {
         activityPluginBinding?.removeActivityResultListener(this)
         activityPluginBinding?.removeRequestPermissionsResultListener(this)
-
-        platform = null
-        beaconBroadcast = null
 
         channel.setMethodCallHandler(null)
         eventChannel.setStreamHandler(null)
@@ -206,12 +120,49 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         activityPluginBinding = null
     }
 
+    private fun stopBeaconSession() {
+        val manager = beaconManager ?: return
+        val scanner = beaconScanner ?: return
+
+        scanner.stopRanging()
+        manager.removeAllRangeNotifiers()
+        scanner.stopMonitoring()
+        manager.removeAllMonitorNotifiers()
+
+        if (manager.isBound(scanner.beaconConsumer)) {
+            manager.unbind(scanner.beaconConsumer)
+        }
+    }
+
+    private fun clearActivityScopedReferences() {
+        platform = null
+        beaconBroadcast = null
+        beaconScanner = null
+        beaconManager = null
+        flutterResult = null
+        flutterResultBluetooth = null
+        eventSinkLocationAuthorizationStatus = null
+    }
+
+    private fun bindBeaconConsumer(result: MethodChannel.Result? = null): Boolean {
+        val manager = beaconManager ?: return false
+        val scanner = beaconScanner ?: return false
+
+        if (manager.isBound(scanner.beaconConsumer)) {
+            return false
+        }
+
+        if (result != null) {
+            flutterResult = result
+        }
+        manager.bind(scanner.beaconConsumer)
+        return true
+    }
+
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: MethodChannel.Result) {
         when (call.method) {
             "initialize" -> {
-                if (beaconManager != null && !beaconManager!!.isBound(beaconScanner!!.beaconConsumer)) {
-                    this.flutterResult = result
-                    beaconManager!!.bind(beaconScanner!!.beaconConsumer)
+                if (bindBeaconConsumer(result)) {
                     return
                 }
                 result.success(true)
@@ -317,15 +268,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
                 result.notImplemented()
             }
             "close" -> {
-                if (beaconManager != null) {
-                    beaconScanner!!.stopRanging()
-                    beaconManager!!.removeAllRangeNotifiers()
-                    beaconScanner!!.stopMonitoring()
-                    beaconManager!!.removeAllMonitorNotifiers()
-                    if (beaconManager!!.isBound(beaconScanner!!.beaconConsumer)) {
-                        beaconManager!!.unbind(beaconScanner!!.beaconConsumer)
-                    }
-                }
+                stopBeaconSession()
                 result.success(true)
             }
             "startBroadcast" -> {
@@ -367,8 +310,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
                 platform!!.openLocationSettings()
             }
             else -> {
-                if (beaconManager != null && !beaconManager!!.isBound(beaconScanner!!.beaconConsumer)) {
-                    beaconManager!!.bind(beaconScanner!!.beaconConsumer)
+                if (bindBeaconConsumer()) {
                     return
                 }
                 result?.success(true)
@@ -389,32 +331,38 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
     // region Activity Callbacks
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray): Boolean {
+        if (requestCode == FlutterBeaconBroadcast.REQUEST_CODE_BLUETOOTH_ADVERTISE) {
+            val advertisingAllowed = grantResults.isNotEmpty() &&
+                grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+
+            if (advertisingAllowed) {
+                beaconBroadcast?.startAdvertisingAfterPermissionGranted()
+            } else {
+                beaconBroadcast?.onAdvertisingPermissionDenied()
+            }
+            return true
+        }
+
         if (requestCode != REQUEST_CODE_LOCATION) {
             return false
         }
 
-        var locationServiceAllowed = false
-        if (permissions.isNotEmpty() && grantResults.isNotEmpty()) {
-            // Prefer ACCESS_FINE_LOCATION which is required for BLE scanning on Android 10+.
-            // Fall back to the first permission if FINE_LOCATION is not in the result set.
-            val checkIndex = permissions.indexOfFirst {
-                it == Manifest.permission.ACCESS_FINE_LOCATION
-            }.takeIf { it >= 0 } ?: 0
+        val deniedPermissions = permissions
+            .zip(grantResults.asIterable())
+            .filter { (_, grantResult) -> grantResult != PackageManager.PERMISSION_GRANTED }
+            .map { (permission, _) -> permission }
 
-            val permission = permissions[checkIndex]
-            if (!platform!!.shouldShowRequestPermissionRationale(permission)) {
-                val grantResult = grantResults[checkIndex]
-                if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                    locationServiceAllowed = true
-                }
-                val status = if (locationServiceAllowed) "ALLOWED" else "DENIED"
-                eventSinkLocationAuthorizationStatus?.success(status)
-            } else {
-                eventSinkLocationAuthorizationStatus?.success("NOT_DETERMINED")
-            }
-        } else {
-            eventSinkLocationAuthorizationStatus?.success("NOT_DETERMINED")
+        val locationServiceAllowed = platform?.checkLocationServicesPermission() == true
+        val status = when {
+            permissions.isEmpty() || grantResults.isEmpty() -> "NOT_DETERMINED"
+            locationServiceAllowed -> "ALLOWED"
+            deniedPermissions.any { permission ->
+                platform?.shouldShowRequestPermissionRationale(permission) == true
+            } -> "NOT_DETERMINED"
+            else -> "DENIED"
         }
+
+        eventSinkLocationAuthorizationStatus?.success(status)
 
         flutterResult?.let {
             if (locationServiceAllowed) {
@@ -425,14 +373,22 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
             flutterResult = null
         }
 
-        return locationServiceAllowed
+        return true
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        val bluetoothEnabled = requestCode == REQUEST_CODE_BLUETOOTH && resultCode == Activity.RESULT_OK
+        if (requestCode != REQUEST_CODE_BLUETOOTH) {
+            return false
+        }
+
+        val bluetoothEnabled = resultCode == Activity.RESULT_OK
 
         if (bluetoothEnabled) {
             if (!platform!!.checkLocationServicesPermission()) {
+                if (flutterResult == null) {
+                    flutterResult = flutterResultBluetooth
+                    flutterResultBluetooth = null
+                }
                 platform!!.requestAuthorization()
             } else {
                 flutterResultBluetooth?.success(true)
@@ -449,7 +405,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
             flutterResult = null
         }
 
-        return bluetoothEnabled
+        return true
     }
 
     // endregion

@@ -1,3 +1,17 @@
+## [0.6.7]
+* Update Android-Beacon-Library to version [2.21.2](https://github.com/AltBeacon/android-beacon-library/tree/2.21.2)
+* Fix Android `checkLocationServicesPermission()` behavior compared to version `0.6.6`
+* Fix Android `startBroadcast()` permission flow on Android 12+ by handling `BLUETOOTH_ADVERTISE` callback correctly
+* Fix `onActivityResult()` so the plugin only handles its own Bluetooth enable request and ignores unrelated activity results
+* Align Android permission requests with the permissions actually required by each OS version for BLE scanning
+* Improve Android permission result handling so `ACCESS_FINE_LOCATION` and `BLUETOOTH_SCAN` are evaluated coherently
+* Improve Android lifecycle cleanup by stopping ranging/monitoring and unbinding AltBeacon on activity detach
+* Remove deprecated `package` attribute from the Android plugin manifest to avoid AGP namespace warnings
+* Clean dead/commented Android plugin code and small receiver robustness issues
+* Replace the obsolete Android unit test with utility tests that cover current plugin code paths
+* Make Android region parsing more fail-safe when invalid beacon identifiers are passed from Flutter
+* Refresh package and example README files so setup instructions match the current Android permission and initialization flow
+
 ## [0.6.6]
 * Update Java compatibility from VERSION_11 to VERSION_17 for modern development standards
 
