@@ -9,6 +9,7 @@ import android.os.Build
 import android.util.Log
 
 import android.app.Activity
+import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.RemoteException
@@ -394,9 +395,15 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
 
         var locationServiceAllowed = false
         if (permissions.isNotEmpty() && grantResults.isNotEmpty()) {
-            val permission = permissions[0]
+            // Prefer ACCESS_FINE_LOCATION which is required for BLE scanning on Android 10+.
+            // Fall back to the first permission if FINE_LOCATION is not in the result set.
+            val checkIndex = permissions.indexOfFirst {
+                it == Manifest.permission.ACCESS_FINE_LOCATION
+            }.takeIf { it >= 0 } ?: 0
+
+            val permission = permissions[checkIndex]
             if (!platform!!.shouldShowRequestPermissionRationale(permission)) {
-                val grantResult = grantResults[0]
+                val grantResult = grantResults[checkIndex]
                 if (grantResult == PackageManager.PERMISSION_GRANTED) {
                     locationServiceAllowed = true
                 }

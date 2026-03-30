@@ -26,23 +26,74 @@ dependencies:
 
 ### Setup specific for Android
 
-For target SDK version 29+ (Android 10, 11) is necessary to add manually ```ACCESS_FINE_LOCATION```
+Add the following permissions to your `AndroidManifest.xml`:
 
-``` 
+```xml
+<!-- Required for BLE scanning on all supported Android versions -->
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-```
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
-and if you want also background scanning: 
-```
+<!-- Required for BLE scanning on Android 12+ (API 31+) -->
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+<!-- Optional: background scanning -->
 <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-```
 
-and if you want to broadcast beacons: 
-```
+<!-- Optional: transmitting as iBeacon -->
 <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 ```
 
-Refer to the example for more detailed information.
+> **Important:** `ACCESS_FINE_LOCATION` is **required** for BLE/iBeacon scanning on Android 10+
+> (API 29+). Without it, scanning will silently fail even if `ACCESS_COARSE_LOCATION` is granted.
+
+In addition to declaring permissions in the manifest you must also request them at runtime.
+The plugin's `initializeAndCheckScanning` handles this automatically, but you can also call
+`flutterBeacon.requestAuthorization` explicitly before starting a scan.
+
+#### Location services must be enabled
+
+Android requires device **Location Services** to be turned on for BLE scanning, even when
+Bluetooth permissions are granted. You can check and prompt the user with:
+
+```dart
+final locationEnabled = await flutterBeacon.checkLocationServicesIfEnabled;
+if (!locationEnabled) {
+  await flutterBeacon.openLocationSettings;
+}
+```
+
+Refer to the example app for a complete setup flow.
+
+#### Android Troubleshooting
+
+**Beacons not detected at all (especially from iOS simulator apps)**
+
+1. Make sure `ACCESS_FINE_LOCATION` is declared in `AndroidManifest.xml` **and** granted at runtime.
+2. Verify that device Location Services (GPS) are switched **on** — Bluetooth scanning on Android
+   depends on Location Services being enabled.
+3. On Android 12+ also ensure `BLUETOOTH_SCAN` is granted at runtime.
+4. Try scanning with an **unfiltered region** first to confirm that iBeacon packets are visible
+   at all, before filtering by UUID:
+
+```dart
+// Android: scan all iBeacons without UUID filter
+final regions = [Region(identifier: 'all-beacons')];
+_streamRanging = flutterBeacon.ranging(regions).listen((result) { ... });
+```
+
+5. Confirm that the iOS simulator app is actually advertising. Use a generic BLE scanner such as
+   **nRF Connect** on the same Android device to check whether the BLE packets are visible.
+6. If detection is inconsistent, try enabling the tracking cache so beacons are not immediately
+   dropped between scan windows:
+
+```dart
+await flutterBeacon.setUseTrackingCache(true);
+await flutterBeacon.setMaxTrackingAge(10000); // keep beacons for 10 s
+```
+
+7. On some devices, disabling **"Bluetooth A2DP Hardware Offload"** in Developer Options improves
+   BLE advertisement detection reliability.
 
 #### iOS 13+ Beacon Visibility Issue
 
@@ -61,10 +112,6 @@ If you want beacons to persistently appear in the results, you can enable the tr
 await flutterBeacon.setUseTrackingCache(true);
 await flutterBeacon.setMaxTrackingAge(10000);
 ```
-
-#### Android Debug Mode - Developer Options
-
-When using Android in debug mode, some developers have reported improved beacon recognition by disabling the "Bluetooth A2DP Hardware Offload" option in the Developer Settings. Disabling this feature can make beacon detection more reliable.
 
 ### Setup specific for iOS
 
