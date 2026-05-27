@@ -77,12 +77,16 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
     }
 
     override fun onDetachedFromActivity() {
+        flutterResult?.error("Beacon", "Activity was detached before completing the pending operation", null)
+        flutterResult = null
+        flutterResultBluetooth?.error("Beacon", "Activity was detached before completing the pending Bluetooth operation", null)
+        flutterResultBluetooth = null
+
         activityPluginBinding?.removeActivityResultListener(this)
         activityPluginBinding?.removeRequestPermissionsResultListener(this)
         activityPluginBinding = null
         platform?.setActivity(null)
         beaconBroadcast = null
-        flutterResultBluetooth = null
         this.activity = null
     }
 
@@ -93,7 +97,6 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         val iBeaconLayout = BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24")
 
         if (!beaconManager!!.beaconParsers.contains(iBeaconLayout)) {
-            beaconManager!!.beaconParsers.clear()
             beaconManager!!.beaconParsers.add(iBeaconLayout)
         }
 
@@ -284,13 +287,28 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
                 result.success(true)
             }
             "startBroadcast" -> {
-                beaconBroadcast!!.startBroadcast(call.arguments, result)
+                val broadcast = beaconBroadcast
+                if (broadcast == null) {
+                    result.error("Beacon", "Activity is required for beacon broadcasting", null)
+                    return
+                }
+                broadcast.startBroadcast(call.arguments, result)
             }
             "stopBroadcast" -> {
-                beaconBroadcast!!.stopBroadcast(result)
+                val broadcast = beaconBroadcast
+                if (broadcast == null) {
+                    result.error("Beacon", "Activity is required for beacon broadcasting", null)
+                    return
+                }
+                broadcast.stopBroadcast(result)
             }
             "isBroadcasting" -> {
-                beaconBroadcast!!.isBroadcasting(result)
+                val broadcast = beaconBroadcast
+                if (broadcast == null) {
+                    result.error("Beacon", "Activity is required for beacon broadcasting", null)
+                    return
+                }
+                broadcast.isBroadcasting(result)
             }
             "isBroadcastSupported" -> {
                 result.success(platform!!.isBroadcastSupported())

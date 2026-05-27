@@ -1,3 +1,12 @@
+## [0.6.8]
+* Fix Android plugin registration for Flutter headless engines by setting up method and event channels in `onAttachedToEngine`
+* Use the application context for Android beacon scanning, Bluetooth/location checks, and AltBeacon service binding
+* Keep Activity-dependent Android flows scoped to Activity attachment, returning explicit errors when headless engines request Activity-only operations
+* Improve Android scanning lifecycle so one Flutter engine does not remove AltBeacon range or monitor callbacks owned by another engine
+* Avoid clearing process-wide AltBeacon parser state when registering the iBeacon parser
+* Complete pending Android Activity-dependent method calls with an error if the Activity detaches before completion
+* Support foreground-service/headless-engine scanning scenarios where the main app UI is closed but scanning remains active
+
 ## [0.6.7]
 * Update Android-Beacon-Library to version [2.21.2](https://github.com/AltBeacon/android-beacon-library/tree/2.21.2)
 * Fix Android `checkLocationServicesPermission()` behavior compared to version `0.6.6`

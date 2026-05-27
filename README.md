@@ -21,7 +21,7 @@ Add to pubspec.yaml:
 
 ```yaml
 dependencies:
-  dchs_flutter_beacon: ^0.6.7
+  dchs_flutter_beacon: ^0.6.8
 ```
 
 ### Setup specific for Android
