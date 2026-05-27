@@ -1,6 +1,5 @@
 package com.cavadalab.dchs_flutter_beacon
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
@@ -11,7 +10,9 @@ import android.util.Log
 import io.flutter.plugin.common.EventChannel
 import org.altbeacon.beacon.*
 
-class FlutterBeaconScanner(private val plugin: DchsFlutterBeaconPlugin,  private val activity: Activity) {
+class FlutterBeaconScanner(private val plugin: DchsFlutterBeaconPlugin, context: Context) {
+
+    private val context = context.applicationContext
 
     companion object {
         private val TAG = FlutterBeaconScanner::class.java.simpleName
@@ -68,7 +69,7 @@ class FlutterBeaconScanner(private val plugin: DchsFlutterBeaconPlugin,  private
         try {
             val beaconManager = plugin.getBeaconManager()
             beaconManager?.apply {
-                removeAllRangeNotifiers()
+                removeRangeNotifier(rangeNotifier)
                 addRangeNotifier(rangeNotifier)
                 regionRanging?.forEach { region ->
                     startRangingBeaconsInRegion(region)
@@ -154,7 +155,7 @@ class FlutterBeaconScanner(private val plugin: DchsFlutterBeaconPlugin,  private
         try {
             val beaconManager = plugin.getBeaconManager()
             beaconManager?.apply {
-                removeAllMonitorNotifiers()
+                removeMonitorNotifier(monitorNotifier)
                 addMonitorNotifier(monitorNotifier)
                 regionMonitoring?.forEach { region ->
                     startMonitoringBeaconsInRegion(region)
@@ -228,15 +229,15 @@ class FlutterBeaconScanner(private val plugin: DchsFlutterBeaconPlugin,  private
         }
 
         override fun getApplicationContext(): Context {
-            return activity.applicationContext!!
+            return context
         }
 
         override fun unbindService(connection: ServiceConnection) {
-            activity.unbindService(connection)
+            context.unbindService(connection)
         }
 
         override fun bindService(intent: Intent, connection: ServiceConnection, mode: Int): Boolean {
-            return activity.bindService(intent, connection, mode)
+            return context.bindService(intent, connection, mode)
         }
     }
 }

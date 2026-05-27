@@ -4,6 +4,7 @@ import android.os.Build
 import android.util.Log
 
 import android.app.Activity
+import android.content.Context
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -45,9 +46,13 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
 
     override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         this.flutterPluginBinding = binding
+        setupChannels(binding.binaryMessenger, binding.applicationContext)
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+        stopBeaconSession()
+        teardownChannels()
+        clearActivityScopedReferences()
         this.flutterPluginBinding = null
     }
 
@@ -55,8 +60,12 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         this.activityPluginBinding = binding
         this.activity = binding.activity
+        activityPluginBinding?.addActivityResultListener(this)
+        activityPluginBinding?.addRequestPermissionsResultListener(this)
+        platform?.setActivity(binding.activity)
 
-        setupChannels(flutterPluginBinding!!.binaryMessenger, activity!!)
+        val iBeaconLayout = BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24")
+        beaconBroadcast = FlutterBeaconBroadcast(binding.activity, iBeaconLayout)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -68,17 +77,18 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
     }
 
     override fun onDetachedFromActivity() {
-        stopBeaconSession()
-        teardownChannels()
-        clearActivityScopedReferences()
+        activityPluginBinding?.removeActivityResultListener(this)
+        activityPluginBinding?.removeRequestPermissionsResultListener(this)
+        activityPluginBinding = null
+        platform?.setActivity(null)
+        beaconBroadcast = null
+        flutterResultBluetooth = null
         this.activity = null
     }
 
-    private fun setupChannels(messenger: BinaryMessenger, activity: Activity) {
-        activityPluginBinding?.addActivityResultListener(this)
-        activityPluginBinding?.addRequestPermissionsResultListener(this)
-
-        beaconManager = BeaconManager.getInstanceForApplication(activity.applicationContext)
+    private fun setupChannels(messenger: BinaryMessenger, context: Context) {
+        val appContext = context.applicationContext
+        beaconManager = BeaconManager.getInstanceForApplication(appContext)
 
         val iBeaconLayout = BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24")
 
@@ -87,10 +97,8 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
             beaconManager!!.beaconParsers.add(iBeaconLayout)
         }
 
-        platform = FlutterPlatform(activity)
-        beaconScanner = FlutterBeaconScanner(this, activity)
-        beaconBroadcast = FlutterBeaconBroadcast(activity, iBeaconLayout)
-
+        platform = FlutterPlatform(appContext, activity)
+        beaconScanner = FlutterBeaconScanner(this, appContext)
         channel = MethodChannel(messenger, "flutter_beacon")
         channel.setMethodCallHandler(this)
 
@@ -101,7 +109,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         eventChannelMonitoring.setStreamHandler(beaconScanner!!.monitoringStreamHandler)
 
         eventChannelBluetoothState = EventChannel(messenger, "flutter_bluetooth_state_changed")
-        eventChannelBluetoothState.setStreamHandler(FlutterBluetoothStateReceiver(activity))
+        eventChannelBluetoothState.setStreamHandler(FlutterBluetoothStateReceiver(appContext))
 
         eventChannelAuthorizationStatus = EventChannel(messenger, "flutter_authorization_status_changed")
         eventChannelAuthorizationStatus.setStreamHandler(locationAuthorizationStatusStreamHandler)
@@ -125,9 +133,7 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         val scanner = beaconScanner ?: return
 
         scanner.stopRanging()
-        manager.removeAllRangeNotifiers()
         scanner.stopMonitoring()
-        manager.removeAllMonitorNotifiers()
 
         if (manager.isBound(scanner.beaconConsumer)) {
             manager.unbind(scanner.beaconConsumer)
@@ -244,7 +250,10 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
             "requestAuthorization" -> {
                 if (!platform!!.checkLocationServicesPermission()) {
                     this.flutterResult = result
-                    platform!!.requestAuthorization()
+                    if (!platform!!.requestAuthorization()) {
+                        this.flutterResult = null
+                        result.error("Beacon", "Activity is required to request permissions", null)
+                    }
                     return
                 }
 
@@ -255,7 +264,10 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
             "openBluetoothSettings" -> {
                 if (!platform!!.checkBluetoothIfEnabled()) {
                     this.flutterResultBluetooth = result
-                    platform!!.openBluetoothSettings()
+                    if (!platform!!.openBluetoothSettings()) {
+                        this.flutterResultBluetooth = null
+                        result.error("Beacon", "Activity is required to open Bluetooth settings", null)
+                    }
                     return
                 }
                 result.success(true)
@@ -301,10 +313,16 @@ class DchsFlutterBeaconPlugin : FlutterPlugin, ActivityAware, MethodChannel.Meth
         flutterResult = result
         when {
             !platform!!.checkBluetoothIfEnabled() -> {
-                platform!!.openBluetoothSettings()
+                if (!platform!!.openBluetoothSettings()) {
+                    flutterResult = null
+                    result?.error("Beacon", "Activity is required to open Bluetooth settings", null)
+                }
             }
             !platform!!.checkLocationServicesPermission() -> {
-                platform!!.requestAuthorization()
+                if (!platform!!.requestAuthorization()) {
+                    flutterResult = null
+                    result?.error("Beacon", "Activity is required to request permissions", null)
+                }
             }
             !platform!!.checkLocationServicesIfEnabled() -> {
                 platform!!.openLocationSettings()

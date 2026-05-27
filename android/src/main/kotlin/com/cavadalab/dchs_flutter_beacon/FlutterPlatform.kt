@@ -16,21 +16,28 @@ import androidx.core.content.ContextCompat
 import org.altbeacon.beacon.BeaconTransmitter
 import java.lang.ref.WeakReference
 
-class FlutterPlatform(activity: Activity) {
-    private val activityWeakReference = WeakReference(activity)
+class FlutterPlatform(context: Context, activity: Activity?) {
+    private val context = context.applicationContext
+    private var activityWeakReference = WeakReference(activity)
 
     private val activity: Activity?
         get() = activityWeakReference.get()
 
+    fun setActivity(activity: Activity?) {
+        activityWeakReference = WeakReference(activity)
+    }
+
     fun openLocationSettings() {
         val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        activity?.startActivity(intent)
+        context.startActivity(intent)
     }
 
-    fun openBluetoothSettings() {
+    fun openBluetoothSettings(): Boolean {
+        val act = activity ?: return false
         val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-        activity?.startActivityForResult(intent, DchsFlutterBeaconPlugin.REQUEST_CODE_BLUETOOTH)
+        act.startActivityForResult(intent, DchsFlutterBeaconPlugin.REQUEST_CODE_BLUETOOTH)
+        return true
     }
 
     fun requiredAuthorizationPermissions(): Array<String> {
@@ -46,40 +53,39 @@ class FlutterPlatform(activity: Activity) {
         }
     }
 
-    fun requestAuthorization() {
+    fun requestAuthorization(): Boolean {
         val permissions = requiredAuthorizationPermissions()
         if (permissions.isEmpty()) {
-            return
+            return true
         }
 
-        activity?.let {
-            ActivityCompat.requestPermissions(
-                it,
-                permissions,
-                DchsFlutterBeaconPlugin.REQUEST_CODE_LOCATION
-            )
-        }
+        val act = activity ?: return false
+        ActivityCompat.requestPermissions(
+            act,
+            permissions,
+            DchsFlutterBeaconPlugin.REQUEST_CODE_LOCATION
+        )
+        return true
     }
 
     fun checkLocationServicesPermission(): Boolean {
-        val act = activity ?: return false
         return when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 // Android 12+: BLUETOOTH_SCAN is required for BLE scanning;
                 // ACCESS_FINE_LOCATION is also needed unless neverForLocation is set.
                 ContextCompat.checkSelfPermission(
-                    act,
+                    context,
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED &&
                 ContextCompat.checkSelfPermission(
-                    act,
+                    context,
                     Manifest.permission.BLUETOOTH_SCAN
                 ) == PackageManager.PERMISSION_GRANTED
             }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
                 // Android 6–11: ACCESS_FINE_LOCATION is required for BLE scanning on Android 10+.
                 ContextCompat.checkSelfPermission(
-                    act,
+                    context,
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
             }
@@ -88,15 +94,14 @@ class FlutterPlatform(activity: Activity) {
     }
 
     fun checkLocationServicesIfEnabled(): Boolean {
-        val act = activity ?: return false
         return when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> {
-                val locationManager = act.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
                 locationManager?.isLocationEnabled ?: false
             }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
                 val mode = Settings.Secure.getInt(
-                    act.contentResolver,
+                    context.contentResolver,
                     Settings.Secure.LOCATION_MODE,
                     Settings.Secure.LOCATION_MODE_OFF
                 )
@@ -108,16 +113,14 @@ class FlutterPlatform(activity: Activity) {
 
     @SuppressLint("MissingPermission")
     fun checkBluetoothIfEnabled(): Boolean {
-        val act = activity ?: throw RuntimeException("Activity is null")
-        val bluetoothManager = act.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
             ?: throw RuntimeException("No Bluetooth service")
         val adapter = bluetoothManager.adapter
         return adapter?.isEnabled ?: false
     }
 
     fun isBroadcastSupported(): Boolean {
-        val act = activity ?: return false
-        return BeaconTransmitter.checkTransmissionSupported(act) == BeaconTransmitter.SUPPORTED
+        return BeaconTransmitter.checkTransmissionSupported(context) == BeaconTransmitter.SUPPORTED
     }
 
     fun shouldShowRequestPermissionRationale(permission: String): Boolean {
