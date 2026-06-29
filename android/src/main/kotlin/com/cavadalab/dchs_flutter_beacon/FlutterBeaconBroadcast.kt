@@ -14,13 +14,13 @@ import org.altbeacon.beacon.BeaconParser
 import org.altbeacon.beacon.BeaconTransmitter
 import io.flutter.plugin.common.MethodChannel
 
-class FlutterBeaconBroadcast(private val activity: Activity, iBeaconLayout: BeaconParser) {
+class FlutterBeaconBroadcast(private val activity: Activity, private val iBeaconLayout: BeaconParser) {
     companion object {
         private val TAG = FlutterBeaconBroadcast::class.java.simpleName
         const val REQUEST_CODE_BLUETOOTH_ADVERTISE = 1236
     }
 
-    private val beaconTransmitter: BeaconTransmitter = BeaconTransmitter(activity.applicationContext, iBeaconLayout)
+    private var beaconTransmitter: BeaconTransmitter = BeaconTransmitter(activity.applicationContext, iBeaconLayout)
     private var pendingResult: MethodChannel.Result? = null
     private var beacon: Beacon? = null
     private var beaconMap: Map<String, Any?>? = null
@@ -81,6 +81,15 @@ class FlutterBeaconBroadcast(private val activity: Activity, iBeaconLayout: Beac
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            // BeaconTransmitter fetches BluetoothLeAdvertiser once in its constructor and never
+            // refreshes it. If Bluetooth was off when this object was first created (e.g. at app
+            // launch), that handle is null forever, causing a NullPointerException inside
+            // startAdvertising(). Recreating the transmitter while idle re-fetches a live
+            // advertiser handle without disrupting any active advertisement.
+            if (!beaconTransmitter.isStarted) {
+                beaconTransmitter = BeaconTransmitter(activity.applicationContext, iBeaconLayout)
+            }
+
             val advertisingMode = map["advertisingMode"]
             if (advertisingMode is Int) {
                 beaconTransmitter.advertiseMode = advertisingMode
@@ -89,26 +98,32 @@ class FlutterBeaconBroadcast(private val activity: Activity, iBeaconLayout: Beac
             if (advertisingTxPowerLevel is Int) {
                 beaconTransmitter.advertiseTxPowerLevel = advertisingTxPowerLevel
             }
-            beaconTransmitter.startAdvertising(beacon, object : AdvertiseCallback() {
-                override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-                    Log.d(TAG, "Start broadcasting = $beacon")
-                    pendingResult?.success(true)
-                    pendingResult = null
-                }
-
-                override fun onStartFailure(errorCode: Int) {
-                    val error = when (errorCode) {
-                        AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE -> "DATA_TOO_LARGE"
-                        AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> "TOO_MANY_ADVERTISERS"
-                        AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED -> "ALREADY_STARTED"
-                        AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR -> "INTERNAL_ERROR"
-                        else -> "FEATURE_UNSUPPORTED"
+            try {
+                beaconTransmitter.startAdvertising(beacon, object : AdvertiseCallback() {
+                    override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+                        Log.d(TAG, "Start broadcasting = $beacon")
+                        pendingResult?.success(true)
+                        pendingResult = null
                     }
-                    Log.e(TAG, error)
-                    pendingResult?.error("Broadcast", error, null)
-                    pendingResult = null
-                }
-            })
+
+                    override fun onStartFailure(errorCode: Int) {
+                        val error = when (errorCode) {
+                            AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE -> "DATA_TOO_LARGE"
+                            AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> "TOO_MANY_ADVERTISERS"
+                            AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED -> "ALREADY_STARTED"
+                            AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR -> "INTERNAL_ERROR"
+                            else -> "FEATURE_UNSUPPORTED"
+                        }
+                        Log.e(TAG, error)
+                        pendingResult?.error("Broadcast", error, null)
+                        pendingResult = null
+                    }
+                })
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start advertising", e)
+                pendingResult?.error("Broadcast", "Failed to start advertising: ${e.message}", null)
+                pendingResult = null
+            }
         } else {
             Log.e(TAG, "FEATURE_UNSUPPORTED")
             pendingResult?.error("Broadcast", "FEATURE_UNSUPPORTED", null)
