@@ -1,3 +1,8 @@
+
+## [0.6.9]
+* Fix Android broadcasting when Bluetooth is disabled at app launch: recreate the AltBeacon `BeaconTransmitter` before starting an idle advertisement so enabling Bluetooth later no longer leaves the process stuck with a cached null advertiser and a swallowed `NullPointerException`.
+* Update the Android example and plugin Gradle setup for Flutter's upcoming dependency validation: Gradle 8.14.3, Android Gradle Plugin 8.11.1, Kotlin 2.2.20, and Built-in Kotlin-compatible build files.
+
 ## [0.6.8]
 * Fix Android plugin registration for Flutter headless engines by setting up method and event channels in `onAttachedToEngine`
 * Use the application context for Android beacon scanning, Bluetooth/location checks, and AltBeacon service binding
