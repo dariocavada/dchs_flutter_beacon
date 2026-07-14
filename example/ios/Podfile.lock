@@ -1,27 +1,15 @@
 PODS:
-  - dchs_flutter_beacon (0.6.1):
-    - Flutter
   - Flutter (1.0.0)
-  - integration_test (0.0.1):
-    - Flutter
 
 DEPENDENCIES:
-  - dchs_flutter_beacon (from `.symlinks/plugins/dchs_flutter_beacon/ios`)
   - Flutter (from `Flutter`)
-  - integration_test (from `.symlinks/plugins/integration_test/ios`)
 
 EXTERNAL SOURCES:
-  dchs_flutter_beacon:
-    :path: ".symlinks/plugins/dchs_flutter_beacon/ios"
   Flutter:
     :path: Flutter
-  integration_test:
-    :path: ".symlinks/plugins/integration_test/ios"
 
 SPEC CHECKSUMS:
-  dchs_flutter_beacon: a420bf9343ce3e8e58b161001842684d4dd05e5d
-  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
 
 PODFILE CHECKSUM: a57f30d18f102dd3ce366b1d62a55ecbef2158e5
 

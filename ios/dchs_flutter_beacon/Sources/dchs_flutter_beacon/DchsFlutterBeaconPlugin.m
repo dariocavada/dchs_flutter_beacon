@@ -218,16 +218,15 @@
         return;
     }
 
-    if ([@"setScanPeriod" isEqualToString:call.method]) {
-        // do nothing
-
-        result(@(YES));
-        return;
-    }
-
-    if ([@"setBetweenScanPeriod" isEqualToString:call.method]) {
-        // do nothing
-
+    // These settings configure Android's AltBeacon scanner. They have no
+    // CoreLocation equivalent, so acknowledge them on iOS as no-ops to keep
+    // the public Dart API safe to call from cross-platform code.
+    if ([@"setScanPeriod" isEqualToString:call.method] ||
+        [@"setBetweenScanPeriod" isEqualToString:call.method] ||
+        [@"setBackgroundScanPeriod" isEqualToString:call.method] ||
+        [@"setBackgroundBetweenScanPeriod" isEqualToString:call.method] ||
+        [@"setUseTrackingCache" isEqualToString:call.method] ||
+        [@"setMaxTrackingAge" isEqualToString:call.method]) {
         result(@(YES));
         return;
     }

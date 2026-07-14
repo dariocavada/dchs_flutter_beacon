@@ -1,4 +1,8 @@
 
+## [0.6.10]
+* Add Swift Package Manager support for iOS while retaining CocoaPods compatibility.
+* Handle Android-only scan period and tracking-cache settings as successful no-ops on iOS so they remain safe in cross-platform code.
+
 ## [0.6.9]
 * Fix Android broadcasting when Bluetooth is disabled at app launch: recreate the AltBeacon `BeaconTransmitter` before starting an idle advertisement so enabling Bluetooth later no longer leaves the process stuck with a cached null advertiser and a swallowed `NullPointerException`.
 * Update the Android example and plugin Gradle setup for Flutter's upcoming dependency validation: Gradle 8.14.3, Android Gradle Plugin 8.11.1, Kotlin 2.2.20, and Built-in Kotlin-compatible build files.

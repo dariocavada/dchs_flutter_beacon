@@ -1,15 +1,14 @@
 //
-//  FBBluetoothStateHandler.m
+//  FBRangingStreamHandler.m
 //  flutter_beacon
 //
-//  Created by Alann Maulana on 24/08/19.
+//  Created by Alann Maulana on 23/01/19.
 //
 
-#import "FBBluetoothStateHandler.h"
-#import <DchsFlutterBeaconPlugin.h>
-#import <CoreBluetooth/CoreBluetooth.h>
+#import "FBRangingStreamHandler.h"
+#import "DchsFlutterBeaconPlugin.h"
 
-@implementation FBBluetoothStateHandler
+@implementation FBRangingStreamHandler
 
 - (instancetype) initWithFlutterBeaconPlugin:(DchsFlutterBeaconPlugin*) instance {
     if (self = [super init]) {
@@ -25,19 +24,16 @@
 
 - (FlutterError * _Nullable)onCancelWithArguments:(id _Nullable)arguments {
     if (self.instance) {
-        self.instance.flutterEventSinkBluetooth = nil;
+        [self.instance stopRangingBeacon];
     }
     return nil;
 }
 
 - (FlutterError * _Nullable)onListenWithArguments:(id _Nullable)arguments eventSink:(nonnull FlutterEventSink)events {
-    // initialize central manager if it itsn't
-    [self.instance initializeCentralManager];
-    
     if (self.instance) {
-        self.instance.flutterEventSinkBluetooth = events;
+        self.instance.flutterEventSinkRanging = events;
+        [self.instance startRangingBeaconWithCall:arguments];
     }
-    
     return nil;
 }
 

@@ -6,7 +6,7 @@
 //
 
 #import "FBAuthorizationStatusHandler.h"
-#import <DchsFlutterBeaconPlugin.h>
+#import "DchsFlutterBeaconPlugin.h"
 #import <CoreBluetooth/CoreBluetooth.h>
 
 @implementation FBAuthorizationStatusHandler

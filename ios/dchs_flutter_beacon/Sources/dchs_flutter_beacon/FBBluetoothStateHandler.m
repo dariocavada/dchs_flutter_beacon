@@ -1,14 +1,15 @@
 //
-//  FBMonitoringStreamHandler.m
+//  FBBluetoothStateHandler.m
 //  flutter_beacon
 //
-//  Created by Alann Maulana on 23/01/19.
+//  Created by Alann Maulana on 24/08/19.
 //
 
-#import "FBMonitoringStreamHandler.h"
-#import <DchsFlutterBeaconPlugin.h>
+#import "FBBluetoothStateHandler.h"
+#import "DchsFlutterBeaconPlugin.h"
+#import <CoreBluetooth/CoreBluetooth.h>
 
-@implementation FBMonitoringStreamHandler
+@implementation FBBluetoothStateHandler
 
 - (instancetype) initWithFlutterBeaconPlugin:(DchsFlutterBeaconPlugin*) instance {
     if (self = [super init]) {
@@ -24,16 +25,19 @@
 
 - (FlutterError * _Nullable)onCancelWithArguments:(id _Nullable)arguments {
     if (self.instance) {
-        [self.instance stopMonitoringBeacon];
+        self.instance.flutterEventSinkBluetooth = nil;
     }
     return nil;
 }
 
 - (FlutterError * _Nullable)onListenWithArguments:(id _Nullable)arguments eventSink:(nonnull FlutterEventSink)events {
+    // initialize central manager if it itsn't
+    [self.instance initializeCentralManager];
+    
     if (self.instance) {
-        self.instance.flutterEventSinkMonitoring = events;
-        [self.instance startMonitoringBeaconWithCall:arguments];
+        self.instance.flutterEventSinkBluetooth = events;
     }
+    
     return nil;
 }
 

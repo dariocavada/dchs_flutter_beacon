@@ -1,14 +1,14 @@
 //
-//  FBRangingStreamHandler.m
+//  FBMonitoringStreamHandler.m
 //  flutter_beacon
 //
 //  Created by Alann Maulana on 23/01/19.
 //
 
-#import "FBRangingStreamHandler.h"
-#import <DchsFlutterBeaconPlugin.h>
+#import "FBMonitoringStreamHandler.h"
+#import "DchsFlutterBeaconPlugin.h"
 
-@implementation FBRangingStreamHandler
+@implementation FBMonitoringStreamHandler
 
 - (instancetype) initWithFlutterBeaconPlugin:(DchsFlutterBeaconPlugin*) instance {
     if (self = [super init]) {
@@ -24,15 +24,15 @@
 
 - (FlutterError * _Nullable)onCancelWithArguments:(id _Nullable)arguments {
     if (self.instance) {
-        [self.instance stopRangingBeacon];
+        [self.instance stopMonitoringBeacon];
     }
     return nil;
 }
 
 - (FlutterError * _Nullable)onListenWithArguments:(id _Nullable)arguments eventSink:(nonnull FlutterEventSink)events {
     if (self.instance) {
-        self.instance.flutterEventSinkRanging = events;
-        [self.instance startRangingBeaconWithCall:arguments];
+        self.instance.flutterEventSinkMonitoring = events;
+        [self.instance startMonitoringBeaconWithCall:arguments];
     }
     return nil;
 }
